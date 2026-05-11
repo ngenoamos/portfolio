@@ -296,11 +296,12 @@ export default function HomePage() {
 
   async function onSubscribe(e: React.FormEvent) {
     e.preventDefault();
+    if (!email) return;
+    
     setSubState("loading");
 
     try {
-      // We send the email to your Telegram bot bridge
-      const response = await fetch("/api/contact", { // Reusing your existing API route
+      const response = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -310,12 +311,23 @@ export default function HomePage() {
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         setSubState("success");
         setEmail("");
+        
+        // Reset success message after 3 seconds
+        setTimeout(() => setSubState("idle"), 3000);
+      } else {
+        throw new Error(data.error || "Subscription failed");
       }
     } catch (err) {
-      setSubState("idle");
+      console.error("Subscription error:", err);
+      setSubState("error");
+      
+      // Reset error after 3 seconds
+      setTimeout(() => setSubState("idle"), 3000);
     }
   }
   return (
@@ -347,7 +359,7 @@ export default function HomePage() {
               </h1>
 
               <div className="mt-4 text-lg sm:text-xl h-8">
-                <CreativeTypewriter />
+                <TypewriterRole />
               </div>
 
               <p className="mt-6 text-sm sm:text-base text-[#94A3B8] leading-relaxed max-w-lg">
@@ -400,7 +412,7 @@ export default function HomePage() {
 
             {/* Right: Profile Image / Visual */}
             <CreativeProfile />
-            
+
           </div>
 
           {/* Scroll indicator */}
@@ -476,7 +488,12 @@ export default function HomePage() {
       {/* The target section for the Navbar link */}
       <section id="subscribe" className="py-20 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-6">
-          <div className="glass-card p-8 md:p-12 border border-[rgba(37,99,235,0.2)] bg-[#0A0A0F]/50 backdrop-blur-sm rounded-3xl text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="glass-card p-8 md:p-12 border border-[rgba(37,99,235,0.2)] bg-[#0A0A0F]/50 backdrop-blur-sm rounded-3xl text-center"
+          >
             <h2 className="text-2xl md:text-3xl font-bold text-[#F1F5F9] mb-4">
               Join The Cathedral Intelligence
             </h2>
@@ -484,7 +501,6 @@ export default function HomePage() {
               Get real-time updates on DeFi infrastructure, M-Pesa bridges, and system architecture deep-dives.
             </p>
             
-            {/* The actual subscription input */}
             <form onSubmit={onSubscribe} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
               <input 
                 type="email" 
@@ -492,23 +508,51 @@ export default function HomePage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email" 
-                className="flex-1 px-6 py-3 rounded-xl bg-[rgba(37,99,235,0.05)] border border-[rgba(37,99,235,0.1)] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                disabled={subState === "loading"}
+                className="flex-1 px-6 py-3 rounded-xl bg-[rgba(37,99,235,0.05)] border border-[rgba(37,99,235,0.1)] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:opacity-50"
               />
               <button 
-                disabled={subState === "loading"}
-                className="px-8 py-3 bg-[#2563EB] text-white font-bold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                type="submit"
+                disabled={subState === "loading" || subState === "success"}
+                className="px-8 py-3 bg-gradient-to-r from-[#2563EB] to-[#3B82F6] text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
               >
-                {subState === "loading" ? "Syncing..." : subState === "success" ? "Done!" : "Subscribe"}
+                {subState === "loading" && (
+                  <span className="absolute inset-0 bg-white/20 animate-pulse" />
+                )}
+                {subState === "loading" ? "Subscribing..." : 
+                subState === "success" ? "✓ Subscribed!" : 
+                subState === "error" ? "Failed! Try Again" : 
+                "Subscribe"}
               </button>
             </form>
 
-            {/* Success Message */}
+            {/* Success Message with Animation */}
             {subState === "success" && (
-              <p className="mt-4 text-[#10B981] text-sm font-medium">
-                Connection established. Welcome to The Cathedral.
-              </p>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 text-[#10B981] text-sm font-medium"
+              >
+                ✨ Connection established. Welcome to The Cathedral... ✨
+              </motion.div>
             )}
-          </div>
+
+            {/* Error Message */}
+            {subState === "error" && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 text-[#EF4444] text-sm font-medium"
+              >
+                ⚠️ Something went wrong. Please try again or contact directly.
+              </motion.div>
+            )}
+
+            {/* Additional Info */}
+            <p className="mt-6 text-xs text-[#64748B]">
+              No spam, unsubscribe anytime. Join 50+ subscribers.
+            </p>
+          </motion.div>
         </div>
       </section>
     </div>
